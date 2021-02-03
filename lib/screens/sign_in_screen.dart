@@ -30,7 +30,7 @@ class SignInScreen extends StatelessWidget {
                   height: 50.0,
                 ),
                 Text(
-                  'Hackathon Demo',
+                  'ATLAS Demo',
                   style: TextStyle(
                       fontFamily: 'BalooTamma2-Regular',
                       fontSize: MediaQuery.of(context).size.width * 0.2,

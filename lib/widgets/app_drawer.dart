@@ -4,6 +4,8 @@ import 'package:json_serializable_test/home.dart';
 import 'package:json_serializable_test/main.dart';
 import 'package:json_serializable_test/models/user.dart';
 import 'package:json_serializable_test/provider/user_provider.dart';
+import 'package:json_serializable_test/screens/add_ship_info.dart';
+import 'package:json_serializable_test/screens/my_vessel.dart';
 import 'package:json_serializable_test/screens/sign_in_screen.dart';
 import 'package:json_serializable_test/screens/weather_screen.dart';
 import 'package:json_serializable_test/services/services.dart' as services;
@@ -82,13 +84,12 @@ class AppDrawer extends StatelessWidget {
               title: Text('My Vessel'),
             ),
             onTap: () {
-              Navigator.pop(context);
-              // services.googleSignIn.signOut();
-              // Navigator.push(context, MaterialPageRoute(
-              //   builder: (context){
-              //     return SignInScreen();
-              //   }
-              // ));
+
+              Navigator.push(context, MaterialPageRoute(
+                  builder: (context){
+                    return MyVessel(id: user.id,);
+                  }
+              ));
             },
           ),
           GestureDetector(

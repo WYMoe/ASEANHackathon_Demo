@@ -33,7 +33,7 @@ dependencies:
   http:
   font_awesome_flutter:
   flutter_weather_icons:
-
+  flutter_local_notifications: ^4.0.0
   flutter:
     sdk: flutter
 

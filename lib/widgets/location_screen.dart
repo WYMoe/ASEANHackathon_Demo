@@ -8,12 +8,13 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:json_serializable_test/models/ship_info.dart';
 
-
 import 'package:json_serializable_test/provider/user_provider.dart';
+import 'package:json_serializable_test/services/my_location.dart';
 import 'package:json_serializable_test/services/services.dart' as services;
 import 'package:provider/provider.dart';
 
 import 'package:maps_toolkit/maps_toolkit.dart' as distanceCalculator;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class LocationScreen extends StatefulWidget {
   @override
@@ -25,8 +26,10 @@ class _LocationScreenState extends State<LocationScreen> {
   final Map<String, Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   List<ShipInfo> shipInfoList = [];
-  CameraPosition initialPos = CameraPosition(target: LatLng(0.0, 0.0), zoom: 17.0);
+  CameraPosition initialPos =
+      CameraPosition(target: LatLng(0.0, 0.0), zoom: 17.0);
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 
   updateMarker(List<ShipInfo> shiplist) {
     setState(() {
@@ -40,35 +43,74 @@ class _LocationScreenState extends State<LocationScreen> {
     });
   }
 
-
-
   @override
   void didChangeDependencies() async {
     //  TODO: implement didChangeDependencies
     updateMarker(shipInfoList);
+    setState(() async {});
+
     super.didChangeDependencies();
   }
 
-
-  showDistance(double distance,String shipName){
+  showDistance(double distance, String shipName) {
     showDialog(
         context: context,
         builder: (context) {
           return AlertDialog(
             title: Text('Distance between your ship and ${shipName}'),
             content: Container(
-              width: MediaQuery.of(context).size.width *
-                  1.2,
-              height:
-              MediaQuery.of(context).size.height *
-                  0.5,
-              child: Text("${(distance/1000).toStringAsFixed(2)} kilometers"),
+              width: MediaQuery.of(context).size.width * 1.2,
+              height: MediaQuery.of(context).size.height * 0.5,
+              child: Text("${(distance / 1000).toStringAsFixed(2)} kilometers"),
             ),
           );
         });
   }
 
- @override
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    var initializationSettingsAndroid =
+        new AndroidInitializationSettings('@mipmap/ic_launcher');
+    var initializationSettingsIOS = new IOSInitializationSettings();
+    var initializationSettings = new InitializationSettings(
+        android: initializationSettingsAndroid, iOS: initializationSettingsIOS);
+    flutterLocalNotificationsPlugin = new FlutterLocalNotificationsPlugin();
+    flutterLocalNotificationsPlugin.initialize(initializationSettings,
+        onSelectNotification: onSelectNotification);
+  }
+
+  Future onSelectNotification(String payload) async {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return new AlertDialog(
+          title: Text("PayLoad"),
+          content: Text("Payload : $payload"),
+        );
+      },
+    );
+  }
+
+  Future _showNotificationWithDefaultSound() async {
+    var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
+        'your channel id', 'your channel name', 'your channel description',
+        importance: Importance.max, priority: Priority.high);
+    var iOSPlatformChannelSpecifics = new IOSNotificationDetails();
+    var platformChannelSpecifics = new NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: iOSPlatformChannelSpecifics);
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Alert',
+      'A ship is near you',
+      platformChannelSpecifics,
+      payload: 'Default_Sound',
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     String id = Provider.of<UserProvider>(context, listen: false).user.id;
     return StreamBuilder<QuerySnapshot>(
@@ -77,13 +119,22 @@ class _LocationScreenState extends State<LocationScreen> {
           if (snapshot.hasData) {
             var myLat;
             var myLng;
-            snapshot.data.docs.forEach((doc) {
+            snapshot.data.docs.forEach((doc) async {
               ShipInfo shipInfo = ShipInfo.fromDocument(doc);
               shipInfoList.add(shipInfo);
+
               if (shipInfo.id == id) {
-                  myLat = shipInfo.latitude;
-                  myLng = shipInfo.longitude;
+                myLat = shipInfo.latitude;
+                myLng = shipInfo.longitude;
+                var d = distanceCalculator.SphericalUtil.computeDistanceBetween(
+                    distanceCalculator.LatLng(myLat, myLng),
+                    distanceCalculator.LatLng(16.2484533, 96.1862217));
+                print(d);
+                if (d < 1000) {
+                  _showNotificationWithDefaultSound();
+                }
               }
+
               final mk = Marker(
                   icon: shipInfo.id == id
                       ? BitmapDescriptor.defaultMarkerWithHue(80.0)
@@ -101,7 +152,8 @@ class _LocationScreenState extends State<LocationScreen> {
                         builder: (BuildContext context) {
                           return Container(
                             padding: EdgeInsets.only(
-                                bottom: MediaQuery.of(context).viewInsets.bottom),
+                                bottom:
+                                    MediaQuery.of(context).viewInsets.bottom),
                             child: SingleChildScrollView(
                               child: Padding(
                                 padding: EdgeInsets.all(20.0),
@@ -113,13 +165,21 @@ class _LocationScreenState extends State<LocationScreen> {
                                       'Ship Name : ${shipInfo.shipName}',
                                       style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 18.0),),
+                                          fontSize: 18.0),
+                                    ),
                                     Divider(),
                                     Text('Owner : ${shipInfo.owner}'),
                                     Text(
                                         'Latitude : ${shipInfo.latitude.toStringAsFixed(4)}'),
                                     Text(
                                         'Longitude : ${shipInfo.longitude.toStringAsFixed(4)}'),
+                                    Text(
+                                        'Registration No : ${shipInfo.regNum}'),
+                                    Text('Year Built : ${shipInfo.yearBuilt}'),
+                                    Text('Company : ${shipInfo.companyName}'),
+                                    Text('Flag : ${shipInfo.address}'),
+                                    Text('Contact : ${shipInfo.contact}'),
+                                    Text('Type : ${shipInfo.type}'),
                                     SizedBox(
                                       height: 10.0,
                                     ),
@@ -139,10 +199,6 @@ class _LocationScreenState extends State<LocationScreen> {
                                               onPressed: () {
                                                 Navigator.pop(context);
                                                 setState(() {
-
-
-
-
                                                   _polylines.clear();
                                                   _polylines.add(Polyline(
                                                       polylineId: PolylineId(
@@ -153,40 +209,41 @@ class _LocationScreenState extends State<LocationScreen> {
                                                             shipInfo.latitude,
                                                             shipInfo.longitude)
                                                       ],
-                                                    color: Colors.lightGreen,
-                                                    patterns: [
-                                                      PatternItem.dot,
-                                                      PatternItem.gap(25.00)
-                                                    ],
-                                                    width: 5,
-                                                    startCap: Cap.roundCap,
-                                                    endCap: Cap.roundCap
-                                                  ));
-
+                                                      color: Colors.lightGreen,
+                                                      patterns: [
+                                                        PatternItem.dot,
+                                                        PatternItem.gap(25.00)
+                                                      ],
+                                                      width: 5,
+                                                      startCap: Cap.roundCap,
+                                                      endCap: Cap.roundCap));
                                                 });
                                                 var distanceBetweenPoints =
-                                                distanceCalculator
-                                                    .SphericalUtil
-                                                    .computeDistanceBetween(
                                                     distanceCalculator
-                                                        .LatLng(
-                                                        myLat, myLng),
-                                                    distanceCalculator.LatLng(
-                                                        shipInfo
-                                                            .latitude,
-                                                        shipInfo
-                                                            .longitude));
-                                                print(distanceBetweenPoints);
+                                                            .SphericalUtil
+                                                        .computeDistanceBetween(
+                                                            distanceCalculator
+                                                                .LatLng(
+                                                                    myLat, myLng),
+                                                            distanceCalculator.LatLng(
+                                                                shipInfo
+                                                                    .latitude,
+                                                                shipInfo
+                                                                    .longitude));
+                                                //print(distanceBetweenPoints);
 
-                                                _scaffoldKey.currentState.hideCurrentSnackBar();
-                                                _scaffoldKey.currentState.showSnackBar(SnackBar(
-                                                  backgroundColor: Colors.lightGreen,
+                                                _scaffoldKey.currentState
+                                                    .hideCurrentSnackBar();
+                                                _scaffoldKey.currentState
+                                                    .showSnackBar(SnackBar(
+                                                  backgroundColor:
+                                                      Colors.lightGreen,
                                                   duration: Duration(days: 1),
-
-                                                  content: Text("${(distanceBetweenPoints/1000).toStringAsFixed(2)} kilometers",
-                                                  style: TextStyle(
-                                                    color: Colors.white
-                                                  ),),
+                                                  content: Text(
+                                                    "${(distanceBetweenPoints / 1000).toStringAsFixed(2)} kilometers",
+                                                    style: TextStyle(
+                                                        color: Colors.white),
+                                                  ),
                                                   action: SnackBarAction(
                                                       label: 'HIDE',
                                                       onPressed: () {
@@ -214,7 +271,7 @@ class _LocationScreenState extends State<LocationScreen> {
             });
 
             return Scaffold(
-              key:_scaffoldKey,
+              key: _scaffoldKey,
               body: Stack(
                 children: [
                   GoogleMap(
@@ -307,8 +364,10 @@ class _LocationScreenState extends State<LocationScreen> {
                                         CameraPosition(
                                             zoom: 17.0,
                                             target: LatLng(
-                                            ShipInfo.fromDocument(shipInfo).latitude,
-                                              ShipInfo.fromDocument(shipInfo).longitude,
+                                              ShipInfo.fromDocument(shipInfo)
+                                                  .latitude,
+                                              ShipInfo.fromDocument(shipInfo)
+                                                  .longitude,
                                             ))));
                               }
                             });
@@ -346,7 +405,6 @@ class ShipLIstTile extends StatelessWidget {
           ('Ship').toString(),
           style: TextStyle(color: Colors.white),
         ),
-
       ),
       subtitle: Text(
         "Owner : " + shipInfo.owner,

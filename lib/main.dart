@@ -125,7 +125,8 @@ class _InitialScreenState extends State<InitialScreen> {
   @override
   void initState() {
     // TODO: implement initState
-   // services.googleSignIn.signOut();
+  services.googleSignIn.signOut();
+
 
     services.googleSignIn.onCurrentUserChanged.listen((account) {
       handleSignIn(account);

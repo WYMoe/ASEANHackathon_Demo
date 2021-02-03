@@ -8,13 +8,20 @@ class ShipsInfoProvider extends ChangeNotifier {
 
   List<ShipInfo> get shipsInfo => _shipsInfo;
 
-  addShipInfo(String id, String owner, String shipName) async {
+  addShipInfo(String id, String owner, String shipName,String regNum,int year,String company,String address,int contact,String type) async {
     await services.shipsInfo.doc(id).set({
       'id': id,
       'owner': owner,
       'shipName': shipName,
       'latitude': 0.0,
-      'longitude': 0.0
+      'longitude': 0.0,
+      'registration':regNum,
+      'year_built':year,
+      'company_name':company,
+      'address':address,
+      'contact':contact,
+      'type':type
+
     });
 
     _shipsInfo.add(ShipInfo(
@@ -22,11 +29,17 @@ class ShipsInfoProvider extends ChangeNotifier {
         owner: owner,
         shipName: shipName,
         latitude: 0.0,
-        longitude: 0.0));
+        longitude: 0.0,
+    regNum: regNum,
+    address: address,
+    companyName: company,
+    contact: contact,
+    type: type,
+    yearBuilt: year));
     notifyListeners();
   }
 
-  updateShipInfo(String id, double lat, double log) async {
+  updateShipInfo(String id, double lat, double log,) async {
     var index = _shipsInfo.indexWhere((shipInfo) => shipInfo.id == id);
 
     _shipsInfo.forEach((shipInfo) async {
@@ -66,5 +79,9 @@ class ShipsInfoProvider extends ChangeNotifier {
     _shipsInfo = shipInfoList;
 
     notifyListeners();
+  }
+
+  ShipInfo getByID(String id) {
+    return _shipsInfo.firstWhere((s) => s.id == id);
   }
 }
